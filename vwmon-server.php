@@ -14,6 +14,7 @@ $db_pass	= 'password';
 
 $db_table_history  = 'vwmon_history';
 $db_table_commands = 'vwmon_commands';
+$db_table_act  = 'vwmon_act'; 			//Only the newest entry
 
 $serverkey	= 'somekey';			// Set a fairly long random server key to avoid misuse
 $admin_email	= 'mein@email.de';		// This will be the sender address for all emails sent
@@ -65,14 +66,21 @@ if (isset($_GET["action"]) && $_GET["action"]=="addrecord")
 // Build query
 
 		$query = "INSERT INTO $db_table_history SET ";
+		$query_act = "INSERT INTO $db_table_act SET ";
 
 		foreach ($_GET as $field => $value)
 		{	if ($field!="action")
 			{
 				if (isset($value) && $value!="NULL")
+				{					
 					$query .= sprintf("`%s` = '%s', ", $mysqli->real_escape_string($field), $mysqli->real_escape_string($value));
+					$query_act .= sprintf("`%s` = '%s', ", $mysqli->real_escape_string($field), $mysqli->real_escape_string($value));
+				}
 				else
+				{
 					$query .= sprintf("`%s` = %s, ", $mysqli->real_escape_string($field), "NULL");
+					$query_act $query .= sprintf("`%s` = %s, ", $mysqli->real_escape_string($field), "NULL");
+				}
 			}
 		}
 
@@ -80,7 +88,21 @@ if (isset($_GET["action"]) && $_GET["action"]=="addrecord")
 
 		$result = $mysqli->query($query);
 		if (!$result)
-			error('VWMon ERROR: Dabase query fault: ' . $mysqli->error. ' query: '. $query);
+			error('VWMon ERROR: Insert query fault: ' . $mysqli->error. ' query: '. $query);
+		
+		//Single entry for faster output actual data
+		//	Delete entry in ACT
+		$query = "TRUNCATE TABLE $db_table_act";
+		$result = $mysqli->query($query);
+		if (!$result)
+			error('VWMon ERROR: Delete ACT-Dabase query fault: ' . $mysqli->error. ' query: '. $query);
+		
+		//	Insert entry in ACT
+		$result = $mysqli->query($query_act);
+		if (!$result)
+			error('VWMon ERROR: Insert-ACT query fault: ' . $mysqli->error. ' query: '. $query_act);
+		
+		$result = $mysqli->query($query_act);		
 
 		echo ("OK");
 	}
